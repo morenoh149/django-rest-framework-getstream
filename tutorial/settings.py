@@ -14,6 +14,8 @@ import os
 import dj_database_url
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+STREAM_API_KEY = os.getenv('STREAM_API_KEY')
+STREAM_API_SECRET = os.getenv('STREAM_API_SECRET')
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'snippets.apps.SnippetsConfig',
+    'stream_django',
 ]
 
 MIDDLEWARE = [

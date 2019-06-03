@@ -3,14 +3,16 @@ from pygments import highlight
 from pygments.formatters.html import HtmlFormatter
 from pygments.lexers import get_all_lexers, get_lexer_by_name
 from pygments.styles import get_all_styles
+from stream_django.activity import Activity
+from stream_django.feed_manager import feed_manager
 
 LEXERS = [item for item in get_all_lexers() if item[1]]
 LANGUAGE_CHOICES = sorted([(item[1][0], item[0]) for item in LEXERS])
 STYLE_CHOICES = sorted((item, item) for item in get_all_styles())
 
 
-class Snippet(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
+class Snippet(models.Model, Activity):
+    created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=100, blank=True, default='')
     code = models.TextField()
     linenos = models.BooleanField(default=False)
@@ -22,8 +24,16 @@ class Snippet(models.Model):
         'auth.User', related_name='snippets', on_delete=models.CASCADE)
     highlighted = models.TextField()
 
+    @property
+    def activity_actor_attr(self):
+        return self.owner
+
+    @property
+    def activity_notify(self):
+        return [feed_manager.get_notification_feed(self.owner_id)]
+
     class Meta:
-        ordering = ('created', )
+        ordering = ('created_at', )
 
     def save(self, *args, **kwargs):
         """

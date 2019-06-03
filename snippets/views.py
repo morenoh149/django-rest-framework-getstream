@@ -2,10 +2,14 @@ from django.contrib.auth.models import User
 from rest_framework import permissions, renderers, viewsets
 from rest_framework.decorators import detail_route
 from rest_framework.response import Response
+from stream_django.feed_manager import feed_manager
+from stream_django.enrich import Enrich
 
 from snippets.models import Snippet
 from snippets.permissions import IsOwnerOrReadOnly
-from snippets.serializers import SnippetSerializer, UserSerializer
+from snippets.serializers import NotificationSerializer, SnippetSerializer, UserSerializer, get_activity_serializer
+
+enricher = Enrich()
 
 
 class SnippetViewSet(viewsets.ModelViewSet):
@@ -36,3 +40,18 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+
+class NotificationViewSet(viewsets.ViewSet):
+    """
+    This viewset returns a notifications feed for the logged in user.
+    The feed contains events for when a relevant snippet is created.
+    """
+    serializer_class = NotificationSerializer
+
+    def list(self, request):
+        feeds = feed_manager.get_news_feeds(self.request.user.id)
+        activities = feeds.get('timeline_aggregated').get()['results']
+        enriched_activities = enricher.enrich_aggregated_activities(activities)
+        serializer = get_activity_serializer(enriched_activities, SnippetSerializer, None, many=True)
+        return Response(serializer.data)
