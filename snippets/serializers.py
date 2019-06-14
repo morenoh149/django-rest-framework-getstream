@@ -24,12 +24,11 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'username', 'snippets')
 
 
-class ActivitySerializer(serializers.Serializer):
+class BaseActivitySerializer(serializers.Serializer):
     id = serializers.UUIDField()
-    foreign_id = serializers.CharField()
-    verb = serializers.CharField()
-    time = serializers.DateTimeField()
 
+
+class ActivitySerializer(BaseActivitySerializer):
     def __init__(self, *args, **kwargs):
         object_serializer = kwargs.pop("object_serializer", None)
         actor_serializer = kwargs.pop("actor_serializer", None)
@@ -43,10 +42,19 @@ class ActivitySerializer(serializers.Serializer):
         else:
             self.fields["actor"] = serializers.CharField()
 
+    foreign_id = serializers.CharField()
+    verb = serializers.CharField()
+    time = serializers.DateTimeField()
 
-class AggregatedSerializer(ActivitySerializer):
+
+class AggregatedSerializer(BaseActivitySerializer):
+    def __init__(self, *args, **kwargs):
+        object_serializer = kwargs.pop("object_serializer", None)
+        actor_serializer = kwargs.pop("actor_serializer", None)
+        super().__init__(self, *args, **kwargs)
+        self.fields["activities"] = ActivitySerializer(many=True, object_serializer=object_serializer, actor_serializer=actor_serializer)
+    
     group = serializers.CharField()
-    activities = ActivitySerializer(many=True)
 
 
 class NotificationSerializer(AggregatedSerializer):
@@ -58,8 +66,10 @@ def get_activity_serializer(data, object_serializer=None, actor_serializer=None,
     kwargs["object_serializer"] = object_serializer
     kwargs["actor_serializer"] = actor_serializer
     serializer = ActivitySerializer
-    if "is_seen" in data:
+    if not data:
+        return serializer(data, **kwargs)
+    if "is_seen" in data[0]:
         serializer = NotificationSerializer
-    elif "activities" in data:
+    elif "activities" in data[0]:
         serializer = AggregatedSerializer
     return serializer(data, **kwargs)
