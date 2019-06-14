@@ -50,8 +50,8 @@ class NotificationViewSet(viewsets.ViewSet):
     serializer_class = NotificationSerializer
 
     def list(self, request):
-        feeds = feed_manager.get_news_feeds(self.request.user.id)
-        activities = feeds.get('timeline_aggregated').get()['results']
+        feed = feed_manager.get_notification_feed(self.request.user.id)
+        activities = feed.get()['results']
         enriched_activities = enricher.enrich_aggregated_activities(activities)
-        serializer = get_activity_serializer(enriched_activities, SnippetSerializer, None, many=True)
+        serializer = get_activity_serializer(enriched_activities, SnippetSerializer, None, many=True, context={'request': request})
         return Response(serializer.data)
